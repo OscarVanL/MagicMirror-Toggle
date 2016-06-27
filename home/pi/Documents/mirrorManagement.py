@@ -3,10 +3,9 @@ import os
 import time
 import datetime
 
-phoneIP = "192.168.0.2"
-timeList=["0800", "2230", "0600", "2230", "0600", "2230", "0845", "2330", "0845", "2358", "0900", "2358", "0900", "2300"] #Two entries for each day, first is "start" second is "end"
-var = 1
-failCount = 0
+phoneIP = "192.168.0.2" #IP address for the device to ping, in this case my phone has static IP 192.168.0.2
+timeList=[0800, 2230, 0600, 2230, 0600, 2230, 0845, 2330, 0845, 2358, 0900, 2358, 0900, 2300] #Two entries for each day (monday, tuesday, wednesday etc), first is on time second is off time.
+failCount = 0 #variable recording the number of times the ping fails
 global mirrorOn
 mirrorOn = False
 
@@ -14,37 +13,38 @@ mirrorOn = False
 def toggle(): #Calling toggles the GPIO, and thus the mirror on/off
     print "entered toggle function"
     global mirrorOn
+	global failCount
     os.system("gpio write 0 1")
     time.sleep(0.8)
     os.system("gpio write 0 0")
     mirrorOn = not mirrorOn
     print "Mirror status", mirrorOn
+	failCount = 0
     return
 
 def pingMirror(): #Calling pings the mirror and return if successful or not.
     print "entered pingMirror function"
     global failCount
     response = os.system("ping -c1 -w1 " + phoneIP + " > /dev/null") #Pings mirror -c1 (once), -w1 (wait for 1 second) and send any responses to /dev/null
-    if response == 0: #Response == 0 when ping successful.
+    if response == 0: #Response == 0 when ping successful. 
         if failCount >=6:
             print "Waking mirror from previous WiFi disabled state"
             toggle()
-            failCount = 0
 	if mirrorOn == False:
 	    toggle()
         return()
     else:
-	print "failCount +1"
+        print "failCount +1"
         failCount += 1
     if failCount == 6:
-	print "failCount = 6, toggling mirror state"
+        print "failCount == 6, toggling mirror state"
         toggle()
-    return()
+    return
 
 os.system("gpio mode 0 out") #Runs first to declare GPIO pin 0 as output mode
 print "running"
 
-while var == 1:
+while True:
     time.sleep(5)
     day = datetime.datetime.today().weekday() #gets weekday where Monday = 0 and Sunday = 6
     currentTime = time.strftime("%H%M") #gets time as HHMM
@@ -65,7 +65,7 @@ while var == 1:
         elif currentTime==timeList[3]+1 and mirrorOn==True:
             toggle()
     elif day == 2:  # wednesday
-	print "wednesday"
+    print "wednesday"
         if currentTime==timeList[4] and mirrorOn==False:
             toggle()
         if currentTime>=timeList[4] and currentTime<=timeList[5]:
@@ -97,7 +97,7 @@ while var == 1:
         elif currentTime==timeList[11]+1 and mirrorOn==True:
             toggle()
     elif day == 6:  # sunday
-	print "sunday"
+    print "sunday"
         if currentTime==timeList[12] and mirrorOn==False:
             toggle()
         if currentTime>=timeList[12] and currentTime<=timeList[13]:
